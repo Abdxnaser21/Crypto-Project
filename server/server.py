@@ -340,12 +340,12 @@ class SecureVaultServer:
         if doc is None:
             return MsgType.ERROR, {"message": "document not found"}
 
-        # Owner can always download their own doc. Otherwise a share must exist.
-        share = None
-        if doc.owner != user:
-            share = self.db.get_share(doc_id, user)
-            if share is None:
-                return MsgType.ERROR, {"message": "access denied"}
+        # Access check: owner is always allowed; others need an explicit share.
+        # We always return the share record if one exists — the owner needs
+        # their own self-share to recover the file key for later re-sharing.
+        share = self.db.get_share(doc_id, user)
+        if doc.owner != user and share is None:
+            return MsgType.ERROR, {"message": "access denied"}
 
         return MsgType.DOC, {
             "document":  base64.b64encode(doc.blob).decode(),
